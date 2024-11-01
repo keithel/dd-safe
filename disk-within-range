@@ -11,6 +11,7 @@ if [[ $? -ne 0 ]]; then
     echo "  -h, --help        Show this help message"
     echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
     echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
+    echo "  -v, --verbose      State the device size, limits and whether it exceeds limits"
     exit 1
 fi
 
@@ -49,8 +50,17 @@ while true; do
     esac
 done
 
+# Get the device name as the last non-option argument
+device="${1:-}"
+
+# Check if device name is provided
+if [[ -z "$device" ]]; then
+    echo "Error: Please provide a device name."
+    exit 1
+fi
+
 # Get disk size in GB
-disk_size=$(lsblk -b --noheadings -o SIZE "$1" | head -1)
+disk_size=$(lsblk -b --noheadings -o SIZE "$device" | head -1)
 disk_size_gb=$((disk_size / 1000 / 1000 / 1000))
 
 # Check if disk size is within the range
