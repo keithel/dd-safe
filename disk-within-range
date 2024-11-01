@@ -4,14 +4,14 @@
 set -e -u
 
 # Parse command-line options using getopt
-options=$(getopt -o hl:u: -l help,lower-limit:,upper-limit: -- "$@")
+options=$(getopt -o hvl:u: -l help,verbose,lower-limit:,upper-limit: -- "$@")
 if [[ $? -ne 0 ]]; then
     echo "Usage: $0 [options] <device>"
     echo "Options:"
     echo "  -h, --help        Show this help message"
+    echo "  -v, --verbose     Print verbose output"
     echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
     echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
-    echo "  -v, --verbose      State the device size, limits and whether it exceeds limits"
     exit 1
 fi
 
@@ -20,6 +20,7 @@ eval set -- "$options"
 # Default limits if not specified
 lower_limit=7
 upper_limit=32
+verbose=false
 
 while true; do
     case "$1" in
@@ -27,9 +28,14 @@ while true; do
             echo "Usage: $0 [options] <device>"
             echo "Options:"
             echo "  -h, --help        Show this help message"
+            echo "  -v, --verbose     Print verbose output"
             echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
             echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
             exit 0
+        ;;
+        -v|--verbose)
+            verbose=true
+            shift
         ;;
         -l|--lower-limit)
             lower_limit="$2"
@@ -63,9 +69,21 @@ fi
 disk_size=$(lsblk -b --noheadings -o SIZE "$device" | head -1)
 disk_size_gb=$((disk_size / 1000 / 1000 / 1000))
 
+if $verbose; then
+    echo "Disk size: $disk_size_gb GB"
+    echo "Lower limit: $lower_limit GB"
+    echo "Upper limit: $upper_limit GB"
+fi
+
 # Check if disk size is within the range
 if [[ $disk_size_gb -ge $lower_limit && $disk_size_gb -le $upper_limit ]]; then
+    if $verbose; then
+        echo "Disk size is within the allowed range."
+    fi
     exit 0
 else
+    if $verbose; then
+        echo "Disk size is not within the allowed range."
+    fi
     exit 1
 fi
