@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Set strict error checking
+set -e -u
+
+# Parse command-line options using getopt
+options=$(getopt -o hl:u: -l help,lower-limit:,upper-limit: -- "$@")
+if [[ $? -ne 0 ]]; then
+    echo "Usage: $0 [options] <device>"
+    echo "Options:"
+    echo "  -h, --help        Show this help message"
+    echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
+    echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
+    exit 1
+fi
+
+eval set -- "$options"
+
+while true; do
+    case "$1" in
+        -h|--help)
+            echo "Usage: $0 [options] <device>"
+            echo "Options:"
+            echo "  -h, --help        Show this help message"
+            echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
+            echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
+            exit 0
+        ;;
+        -l|--lower-limit)
+            lower_limit="$2"
+            shift 2
+        ;;
+        -u|--upper-limit)
+            upper_limit="$2"
+            shift 2
+        ;;
+        --)
+            shift
+            break
+        ;;
+        *)
+            echo "Invalid option: $1"
+            exit 1
+        ;;
+    esac
+done
+
+# Default limits if not specified
+if [[ -z "$lower_limit" ]]; then
+    lower_limit=7
+fi
+if [[ -z "$upper_limit" ]]; then
+    upper_limit=32
+fi
+
+# Get disk size in GB
+disk_size=$(lsblk -b --noheadings -o SIZE "$1" | head -1)
+disk_size_gb=$((disk_size / 1000 / 1000 / 1000))
+
+# Check if disk size is within the range
+if [[ $disk_size_gb -ge $lower_limit && $disk_size_gb -le $upper_limit ]]; then
+    exit 0
+else
+    exit 1
+fi
