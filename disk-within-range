@@ -1,19 +1,23 @@
 #!/bin/bash
 
-# Set strict error checking
-set -e -u
+set -u
 
-# Parse command-line options using getopt
-options=$(getopt -o hvl:u: -l help,verbose,lower-limit:,upper-limit: -- "$@")
-if [[ $? -ne 0 ]]; then
+function usage() {
     echo "Usage: $0 [options] <device>"
     echo "Options:"
     echo "  -h, --help        Show this help message"
     echo "  -v, --verbose     Print verbose output"
     echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
     echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
+}
+
+options=$(getopt -o hvl:u: -l help,verbose,lower-limit:,upper-limit: -- "$@")
+if [[ $? -ne 0 ]]; then
+    usage
     exit 1
 fi
+
+set -e
 
 eval set -- "$options"
 
@@ -25,12 +29,7 @@ verbose=false
 while true; do
     case "$1" in
         -h|--help)
-            echo "Usage: $0 [options] <device>"
-            echo "Options:"
-            echo "  -h, --help        Show this help message"
-            echo "  -v, --verbose     Print verbose output"
-            echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
-            echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
+            usage
             exit 0
         ;;
         -v|--verbose)
@@ -57,9 +56,10 @@ while true; do
 done
 
 # Get the device name as the last non-option argument
+# use :- to provide a default to make `set -u` happy.
 device="${1:-}"
 
-# Check if device name is provided
+# Make sure a device name was provided.
 if [[ -z "$device" ]]; then
     echo "Error: Please provide a device name."
     exit 1
@@ -70,9 +70,12 @@ disk_size=$(lsblk -b --noheadings -o SIZE "$device" | head -1)
 disk_size_gb=$((disk_size / 1000 / 1000 / 1000))
 
 if $verbose; then
-    echo "Disk size: $disk_size_gb GB"
-    echo "Lower limit: $lower_limit GB"
-    echo "Upper limit: $upper_limit GB"
+    # Determine the maximum width for formatting
+    max_width=$(printf "%d\n" "$disk_size_gb" "$lower_limit" "$upper_limit" | wc -L)
+
+    printf "Disk size:   %${max_width}d GB\n" "$disk_size_gb"
+    printf "Lower limit: %${max_width}d GB\n" "$lower_limit"
+    printf "Upper limit: %${max_width}d GB\n" "$upper_limit"
 fi
 
 # Check if disk size is within the range
