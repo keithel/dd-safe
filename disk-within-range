@@ -106,7 +106,9 @@ if [[ $disk_size_gb -ge $lower_limit && $disk_size_gb -le $upper_limit ]]; then
     if $dry_run; then
         echo "Dry run: dd if=\"$input_file\" of=\"$output_device\" bs=1M"
     else
-        dd if="$input_file" of="$output_device" bs=1M
+        # Set up the trap just before executing sudo dd
+        trap 'sudo -k' EXIT
+        sudo dd if="$input_file" of="$output_device" bs=1M count=1
     fi
 else
     echo >&2 "Error: Disk size is not within the allowed range. dd operation aborted."
