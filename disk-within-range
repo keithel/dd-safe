@@ -9,9 +9,10 @@ function usage() {
     echo "  -v, --verbose     Print verbose output"
     echo "  -l, --lower-limit  Lower size limit in GB (default: 7)"
     echo "  -u, --upper-limit  Upper size limit in GB (default: 32)"
+    echo "  -d, --dry-run      Dry run mode (do not execute dd)"
 }
 
-options=$(getopt -o hvl:u: -l help,verbose,lower-limit:,upper-limit: -- "$@")
+options=$(getopt -o hvl:u:d -l help,verbose,dry-run,lower-limit:,upper-limit: -- "$@")
 if [[ $? -ne 0 ]]; then
     usage
     exit 1
@@ -25,6 +26,7 @@ eval set -- "$options"
 lower_limit=7
 upper_limit=32
 verbose=false
+dry_run=false
 
 while true; do
     case "$1" in
@@ -34,6 +36,10 @@ while true; do
         ;;
         -v|--verbose)
             verbose=true
+            shift
+        ;;
+        -d|--dry-run)
+            dry_run=true
             shift
         ;;
         -l|--lower-limit)
@@ -85,8 +91,11 @@ if [[ $disk_size_gb -ge $lower_limit && $disk_size_gb -le $upper_limit ]]; then
     if $verbose; then
         echo "Disk size is within the allowed range."
     fi
-    # Execute dd command with the input file and output device
-    dd if="$input_file" of="$output_device" bs=1M
+    if $dry_run; then
+        echo "Dry run: dd if=\"$input_file\" of=\"$output_device\" bs=1M"
+    else
+        dd if="$input_file" of="$output_device" bs=1M
+    fi
 else
     echo >&2 "Error: Disk size is not within the allowed range. dd operation aborted."
     exit 1
