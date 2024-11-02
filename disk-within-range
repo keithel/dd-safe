@@ -73,6 +73,18 @@ if [[ -z "$input_file" || -z "$output_device" ]]; then
     exit 1
 fi
 
+# Check if the input file or device exists and is a block or character device
+if [[ ! -b "$input_file" && ! -c "$input_file" && ! -f "$input_file" ]]; then
+    echo "Error: Input file '$input_file' does not exist or is not a block, character, or regular file."
+    exit 1
+fi
+
+# Check if the output device exists and is a block device
+if [[ ! -b "$output_device" ]]; then
+    echo "Error: Output device '$output_device' does not exist or is not a block device."
+    exit 1
+fi
+
 # Get the size of the output device in GB
 disk_size=$(lsblk -b --noheadings -o SIZE "$output_device" | head -1)
 disk_size_gb=$((disk_size / 1000 / 1000 / 1000))
