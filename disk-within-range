@@ -55,11 +55,23 @@ while true; do
             break
         ;;
         *)
-            echo "Invalid option: $1"
+            echo >&2 "Invalid option: $1"
             exit 1
         ;;
     esac
 done
+
+# Check if lower limit and upper limit are integers
+if [[ ! "$lower_limit" =~ ^[0-9]+$ ]] || [[ ! "$upper_limit" =~ ^[0-9]+$ ]]; then
+    echo >&2 "Error: Lower limit and upper limit must be integers."
+    exit 1
+fi
+
+# Check if lower limit is less than upper limit
+if [[ $lower_limit -ge $upper_limit ]]; then
+    echo >&2 "Error: Lower limit must be less than upper limit."
+    exit 1
+fi
 
 # Get the input file and output device
 # use :- to provide a default to make `set -u` happy.
@@ -68,20 +80,20 @@ output_device="${2:-}"
 
 # Check if input file and output device are provided
 if [[ -z "$input_file" || -z "$output_device" ]]; then
-    echo "Error: Please provide an input file and an output device."
+    echo >&2 "Error: Please provide an input file and an output device."
     usage
     exit 1
 fi
 
 # Check if the input file or device exists and is a block or character device
 if [[ ! -b "$input_file" && ! -c "$input_file" && ! -f "$input_file" ]]; then
-    echo "Error: Input file '$input_file' does not exist or is not a block, character, or regular file."
+    echo >&2 "Error: Input file '$input_file' does not exist or is not a block, character, or regular file."
     exit 1
 fi
 
 # Check if the output device exists and is a block device
 if [[ ! -b "$output_device" ]]; then
-    echo "Error: Output device '$output_device' does not exist or is not a block device."
+    echo >&2 "Error: Output device '$output_device' does not exist or is not a block device."
     exit 1
 fi
 
@@ -106,9 +118,8 @@ if [[ $disk_size_gb -ge $lower_limit && $disk_size_gb -le $upper_limit ]]; then
     if $dry_run; then
         echo "Dry run: dd if=\"$input_file\" of=\"$output_device\" bs=1M"
     else
-        # Set up the trap just before executing sudo dd
         trap 'sudo -k' EXIT
-        sudo dd if="$input_file" of="$output_device" bs=1M count=1
+        sudo dd if="$input_file" of="$output_device" bs=1M
     fi
 else
     echo >&2 "Error: Disk size is not within the allowed range. dd operation aborted."
