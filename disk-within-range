@@ -3,7 +3,7 @@
 set -u
 
 function usage() {
-    echo "Usage: $0 [options] <device>"
+    echo "Usage: $0 [options] <input-file> <output-device>"
     echo "Options:"
     echo "  -h, --help        Show this help message"
     echo "  -v, --verbose     Print verbose output"
@@ -55,18 +55,20 @@ while true; do
     esac
 done
 
-# Get the device name as the last non-option argument
+# Get the input file and output device
 # use :- to provide a default to make `set -u` happy.
-device="${1:-}"
+input_file="${1:-}"
+output_device="${2:-}"
 
-# Make sure a device name was provided.
-if [[ -z "$device" ]]; then
-    echo "Error: Please provide a device name."
+# Check if input file and output device are provided
+if [[ -z "$input_file" || -z "$output_device" ]]; then
+    echo "Error: Please provide an input file and an output device."
+    usage
     exit 1
 fi
 
-# Get disk size in GB
-disk_size=$(lsblk -b --noheadings -o SIZE "$device" | head -1)
+# Get the size of the output device in GB
+disk_size=$(lsblk -b --noheadings -o SIZE "$output_device" | head -1)
 disk_size_gb=$((disk_size / 1000 / 1000 / 1000))
 
 if $verbose; then
@@ -83,10 +85,9 @@ if [[ $disk_size_gb -ge $lower_limit && $disk_size_gb -le $upper_limit ]]; then
     if $verbose; then
         echo "Disk size is within the allowed range."
     fi
-    exit 0
+    # Execute dd command with the input file and output device
+    dd if="$input_file" of="$output_device" bs=1M
 else
-    if $verbose; then
-        echo "Disk size is not within the allowed range."
-    fi
+    echo >&2 "Error: Disk size is not within the allowed range. dd operation aborted."
     exit 1
 fi
